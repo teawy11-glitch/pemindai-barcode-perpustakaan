@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pemindai Barcode Perpustakaan</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1f5fb;
+      color: #172b4d;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: white;
+      padding: 22px;
+      border-radius: 14px;
+      box-shadow: 0 3px 15px #0001;
+    }
+    h2 { color: #17365d; }
+    button {
+      background: #17365d;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 5px 3px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; }
+    #reader {
+      width: 100%;
+      margin-top: 18px;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #ccd5e0;
+      border-radius: 8px;
+      font-size: 18px;
+      margin-top: 8px;
+    }
+    #result {
+      background: #e8f0fb;
+      padding: 14px;
+      border-radius: 8px;
+      margin-top: 15px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Pemindai Barcode Perpustakaan</h2>
+    <p>Arahkan kamera ke barcode buku.</p>
+
+    <button onclick="startScanner()">Buka Kamera</button>
+    <button onclick="stopScanner()">Tutup Kamera</button>
+
+    <div id="reader"></div>
+
+    <div id="result">
+      Hasil pemindaian akan muncul di sini.
+    </div>
+
+    <label>Nomor barcode:</label>
+    <input id="barcode" readonly>
+
+    <button onclick="copyBarcode()">Salin Barcode</button>
+  </div>
+
+  <script>
+    let scanner = null;
+    let running = false;
+
+    async function startScanner() {
+      if (typeof Html5Qrcode === 'undefined') {
+        alert('Pemindai gagal dimuat. Periksa koneksi internet.');
+        return;
+      }
+
+      if (running) return;
+
+      try {
+        scanner = new Html5Qrcode('reader');
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.CODE_128,
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E
+            ],
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
+            }
+          },
+          async (decodedText) => {
+            document.getElementById('barcode').value = decodedText;
+            document.getElementById('result').textContent =
+              'Barcode berhasil dipindai: ' + decodedText;
+
+            await stopScanner();
+          }
+        );
+
+        running = true;
+      } catch (error) {
+        scanner = null;
+        alert('Kamera gagal dibuka: ' + error);
+      }
+    }
+
+    async function stopScanner() {
+      if (scanner && running) {
+        try {
+          await scanner.stop();
+          scanner.clear();
+        } catch (error) {
+          console.log(error);
+        }
+      }
+      scanner = null;
+      running = false;
+    }
+
+    async function copyBarcode() {
+      const value = document.getElementById('barcode').value;
+      if (!value) {
+        alert('Belum ada barcode yang dipindai.');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(value);
+        alert('Barcode berhasil disalin: ' + value);
+      } catch (error) {
+        alert('Tidak dapat menyalin. Silakan salin secara manual.');
+      }
+    }
+  </script>
+</body>
+</html>
